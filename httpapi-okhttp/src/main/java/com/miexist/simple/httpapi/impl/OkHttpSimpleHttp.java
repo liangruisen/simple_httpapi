@@ -36,7 +36,7 @@ import com.squareup.okhttp.internal.http.HttpMethod;
  * @author liangruisen
  *
  */
-public class HttpClientSimpleHttp implements SimpleHttp {
+public class OkHttpSimpleHttp implements SimpleHttp {
 	
 	private OkHttpClient okHttpClient = new OkHttpClient();
 	

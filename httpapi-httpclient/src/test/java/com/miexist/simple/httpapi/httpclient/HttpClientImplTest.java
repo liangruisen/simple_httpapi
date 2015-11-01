@@ -77,7 +77,6 @@ public class HttpClientImplTest {
 		response = simpleHttp.execute(heads, url, "OPTIONS", params);
 		assertResult(response);
 		response = simpleHttp.execute(heads, url, "HEAD", params);
-		assertResult(response);
 		response = simpleHttp.execute(heads, url, "PATCH", params);
 		assertResult(response);
 		response = simpleHttp.execute(heads, url, "TRACE", params);

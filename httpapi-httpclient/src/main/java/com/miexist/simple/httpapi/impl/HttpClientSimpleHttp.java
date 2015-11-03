@@ -27,7 +27,6 @@ import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpOptions;
-import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpTrace;
@@ -228,6 +227,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * @param method
 	 * @param params
 	 * @return HttpUriRequest
+	 * @throws IOException 
 	 */
 	private HttpUriRequest createRequest(String url, String method,
 			Map<String, String> params) {
@@ -249,8 +249,6 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 		HttpEntityEnclosingRequestBase request;
 		if ("PUT".equalsIgnoreCase(method)) {
 			request = new HttpPut(url);
-		}else if("PATCH".equalsIgnoreCase(method)){
-			request = new HttpPatch(url);
 		}else{
 			request = new HttpPost(url);
 		}

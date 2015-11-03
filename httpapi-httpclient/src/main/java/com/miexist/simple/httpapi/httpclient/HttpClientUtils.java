@@ -18,7 +18,7 @@ package com.miexist.simple.httpapi.httpclient;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +32,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 
 import com.miexist.simple.httpapi.util.IOUtils;
 
@@ -99,6 +97,7 @@ public abstract class HttpClientUtils {
 	 * 设置HTTP请求的表单参数
 	 * @param request
 	 * @param params
+	 * @throws IOException 
 	 */
 	public static void setParams(HttpEntityEnclosingRequest request, Map<String, String> params){
 		if(params != null && !params.isEmpty()){
@@ -106,7 +105,10 @@ public abstract class HttpClientUtils {
 			for(Map.Entry<String, String> entry : params.entrySet()){
 				list.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
 			}
-			request.setEntity(new UrlEncodedFormEntity(list, Charset.forName("UTF-8")));
+			try {
+				request.setEntity(new UrlEncodedFormEntity(list, "UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+			}
 		}
 	}
 	
@@ -157,7 +159,15 @@ public abstract class HttpClientUtils {
 		if (response != null) {
 			try{
                 try {
-                    EntityUtils.consume(response.getEntity());
+                	HttpEntity entity = response.getEntity();
+                	if(entity != null){
+                		if (entity.isStreaming()) {
+                            InputStream instream = entity.getContent();
+                            if (instream != null) {
+                                instream.close();
+                            }
+                        }
+                	}
                 } finally{
                 	if(response instanceof Closeable){
                 		((Closeable)response).close();
@@ -167,23 +177,6 @@ public abstract class HttpClientUtils {
 	         }
         }
 	}
-	
-	/**
-	 * 忽略错误关闭CloseableHttpResponse
-	 * @param response
-	 */
-	public static void closeQuietly(final CloseableHttpResponse response) {
-        if (response != null) {
-            try {
-                try {
-                    EntityUtils.consume(response.getEntity());
-                } finally {
-                    response.close();
-                }
-            } catch (final IOException ignore) {
-            }
-        }
-    }
 	
 	/**
 	 * 忽略错误关闭HttpClient

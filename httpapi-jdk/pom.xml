@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>com.miexist.simple</groupId>
 		<artifactId>httpapi-parent</artifactId>
-		<version>0.0.1-SNAPSHOT</version>
+		<version>${httpapi.version}</version>
 	</parent>
 	<artifactId>httpapi-jdk</artifactId>
 	<name>httpapi-jdk</name>
@@ -24,7 +24,7 @@
 		<dependency>
 			<groupId>com.miexist.simple</groupId>
 			<artifactId>httpapi</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>${httpapi.version}</version>
 		</dependency>
 	</dependencies>
 </project>

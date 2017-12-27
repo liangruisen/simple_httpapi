@@ -152,6 +152,27 @@ public interface SimpleHttp {
 	 * @throws IOException
 	 */
 	SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params) throws IOException;
+
+	/**
+	 * 设置HTTP Header信息并同步发送HTTP 请求
+	 * @param heads
+	 * @param url
+	 * @param method
+	 * @param params
+	 * @return SimpleResponse
+	 * @throws IOException
+	 */
+	SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params, FileItem ...fileItems) throws IOException;
+	
+	/**
+	 * 同步执行http请求
+	 * @param url
+	 * @param method
+	 * @param body
+	 * @return SimpleResponse
+	 * @throws IOException
+	 */
+	SimpleResponse execute(String url, String method, HttpBody body) throws IOException;
 	
 	/**
 	 * 设置HTTP Header信息并异步发送HTTP 请求
@@ -159,7 +180,28 @@ public interface SimpleHttp {
 	 * @param url
 	 * @param method
 	 * @param params
+	 * @param fileItems
 	 * @return SimpleResponse
 	 */
 	void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params, SimpleCallback callback);
+
+	/**
+	 * 设置HTTP Header信息并异步发送HTTP 请求
+	 * @param heads
+	 * @param url
+	 * @param method
+	 * @param params
+	 * @param fileItems
+	 * @return SimpleResponse
+	 */
+	void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params, SimpleCallback callback, FileItem ...fileItems);
+	
+	/**
+	 * 异步执行http请求
+	 * @param url
+	 * @param method
+	 * @param body
+	 * @param callback
+	 */
+	void enqueue(String url, String method, HttpBody body, SimpleCallback callback);
 }

@@ -18,7 +18,6 @@ package com.miexist.simple.httpapi.httpclient;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,9 +30,12 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.entity.EntityBuilder;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.message.BasicNameValuePair;
 
+import com.miexist.simple.httpapi.FileItem;
 import com.miexist.simple.httpapi.util.IOUtils;
 
 /**
@@ -99,16 +101,28 @@ public abstract class HttpClientUtils {
 	 * @param params
 	 * @throws IOException 
 	 */
-	public static void setParams(HttpEntityEnclosingRequest request, Map<String, String> params){
-		if(params != null && !params.isEmpty()){
-			List<NameValuePair> list = new ArrayList<NameValuePair>();
-			for(Map.Entry<String, String> entry : params.entrySet()){
-				list.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+	public static void setParams(HttpEntityEnclosingRequest request, Map<String, String> params, FileItem[] fileItems) throws IOException{
+		if(fileItems == null || fileItems.length <= 0) {
+			if(params != null && !params.isEmpty()){
+				EntityBuilder builder = EntityBuilder.create();
+				List<NameValuePair> list = new ArrayList<NameValuePair>();
+				for(Map.Entry<String, String> entry : params.entrySet()){
+					list.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+				}
+				builder.setParameters(list);
+				request.setEntity(builder.build());
 			}
-			try {
-				request.setEntity(new UrlEncodedFormEntity(list, "UTF-8"));
-			} catch (UnsupportedEncodingException e) {
+		}else {
+			MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+			if(params != null && !params.isEmpty()){
+				for(Map.Entry<String, String> entry : params.entrySet()){
+					builder.addTextBody(entry.getKey(), entry.getValue());
+				}
 			}
+			for(FileItem item : fileItems) {
+				builder.addBinaryBody(item.getFieldName(), item.getInputStream(), ContentType.create(item.getContentType()), item.getName());
+			}
+			request.setEntity(builder.build());
 		}
 	}
 	

@@ -18,15 +18,17 @@ package com.miexist.simple.httpapi.impl;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.miexist.simple.httpapi.FileItem;
+import com.miexist.simple.httpapi.HttpBody;
 import com.miexist.simple.httpapi.SimpleCallback;
 import com.miexist.simple.httpapi.SimpleHttp;
 import com.miexist.simple.httpapi.SimpleResponse;
-import com.miexist.simple.httpapi.jdk.JdkRequestBody;
 import com.miexist.simple.httpapi.jdk.JdkSimpleRequest;
 import com.miexist.simple.httpapi.jdk.JdkSimpleResponse;
 import com.miexist.simple.httpapi.util.StringUtils;
@@ -38,7 +40,7 @@ import com.miexist.simple.httpapi.util.StringUtils;
  */
 public class JdkSimpleHttp implements SimpleHttp {
 
-	private ExecutorService executorService = Executors.newFixedThreadPool(5);
+	private ExecutorService executorService = null;
 	
 	/* (non-Javadoc)
 	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
@@ -150,7 +152,8 @@ public class JdkSimpleHttp implements SimpleHttp {
 	@Override
 	public SimpleResponse execute(Map<String, String> heads, String url,
 			String method, Map<String, String> params) throws IOException {
-		JdkSimpleRequest request = createRequest(heads, url, method.toUpperCase(), params);
+		HttpBody body = new JdkHttpBody(heads, params);
+		JdkSimpleRequest request = createRequest(url, method.toUpperCase(), body);
 		return execute(request);
 	}
 
@@ -160,12 +163,8 @@ public class JdkSimpleHttp implements SimpleHttp {
 	@Override
 	public void enqueue(Map<String, String> heads, String url, String method,
 			Map<String, String> params, SimpleCallback callback) {
-		try {
-			JdkSimpleRequest request = createRequest(heads, url, method.toUpperCase(), params);
-			executorService.submit(new Call(callback, request));
-		} catch (IOException e) {
-			throw new IllegalArgumentException(e);
-		}
+		HttpBody body = new JdkHttpBody(heads, params);
+		enqueue(url, method, body, callback);
 	}
 	
 	private JdkSimpleResponse execute(JdkSimpleRequest request) throws IOException {
@@ -184,54 +183,42 @@ public class JdkSimpleHttp implements SimpleHttp {
 		connection.setReadTimeout(1000*30);
 		connection.setConnectTimeout(1000*10);
 		connection.setRequestMethod(request.getMethod());
-		if(request.getBody() != null){
+		HttpBody body = request.getBody();
+		JdkHttpBody httpBody = null;
+		if(body != null){
+			if(body instanceof JdkHttpBody) {
+				httpBody = (JdkHttpBody)body;
+			}else {
+				httpBody = new JdkHttpBody(body);
+			}
 			connection.setDoOutput(true);
 			connection.setRequestProperty("Accept-Charset", "UTF-8");
-			connection.setRequestProperty("Content-Type", request.getBody().getType());
-			connection.setRequestProperty("Content-Length", String.valueOf(request.getBody().getContent().size()));
+			connection.setRequestProperty("Content-Type", httpBody.getContentType());
+			connection.setRequestProperty("Content-Length", String.valueOf(httpBody.getContentLength()));
 		}
 		connection.connect();
-		if(request.getBody() != null){
-			request.getBody().getContent().writeTo(connection.getOutputStream());
+		if(body != null){
+			httpBody.writeTo(connection.getOutputStream());
 			connection.getOutputStream().flush();
 			connection.getOutputStream().close();
 		}
 		return response;
 	}
 	
-	private JdkSimpleRequest createRequest(Map<String, String> heads, String url,
-			String method, Map<String, String> params) throws IOException{
+	private JdkSimpleRequest createRequest(String url, String method, HttpBody body) throws IOException{
+		if(body == null) {
+			throw new IllegalArgumentException("body is null");
+		}
 		JdkSimpleRequest request = new JdkSimpleRequest();
 		request.setMethod(method);
 		if(!isHasBodyMethod(method)){
-			url = StringUtils.appendUrlParams(url, params);
+			url = StringUtils.appendUrlParams(url, body.getParams());
 		}else{
-			request.setBody(parseParams(params));
+			request.setBody(body);
 		}
 		URL urlobj = new URL(url);
 		request.setUrl(urlobj);
-		addHeaders(request, heads);
 		return request;
-	}
-	
-	private void addHeaders(JdkSimpleRequest request, Map<String, String> headers){
-		if(headers == null || headers.isEmpty()){
-			return;
-		}
-		for(Map.Entry<String, String> entry : headers.entrySet()){
-			request.addHeader(entry.getKey(), entry.getValue());
-		}
-	}
-	
-	private JdkRequestBody parseParams(Map<String, String> params) throws IOException{
-		JdkRequestBody body = new JdkRequestBody();
-		if(params == null || params.isEmpty()){
-			return body;
-		}
-		for(Map.Entry<String, String> entry : params.entrySet()){
-			body.add(entry.getKey(), entry.getValue());
-		}
-		return body;
 	}
 
 	private boolean isHasBodyMethod(String method){
@@ -261,5 +248,59 @@ public class JdkSimpleHttp implements SimpleHttp {
 				callback.onFailure(request, e);
 			}
 		}
+	}
+
+	@Override
+	public SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params,
+			FileItem... fileItems) throws IOException {
+		List<FileItem> fileList = null;
+		if(fileItems != null) {
+			fileList = Arrays.asList(fileItems);
+		}
+		HttpBody body = new JdkHttpBody(heads, params, fileList);
+		return execute(url, method, body);
+	}
+
+	@Override
+	public void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params,
+			SimpleCallback callback, FileItem... fileItems) {
+		List<FileItem> fileList = null;
+		if(fileItems != null) {
+			fileList = Arrays.asList(fileItems);
+		}
+		HttpBody body = new JdkHttpBody(heads, params, fileList);
+		enqueue(url, method, body, callback);
+	}
+
+	@Override
+	public SimpleResponse execute(String url, String method, HttpBody body) throws IOException {
+		JdkSimpleRequest request = createRequest(url, method, body);
+		return execute(request);
+	}
+
+	@Override
+	public void enqueue(String url, String method, HttpBody body, SimpleCallback callback) {
+		JdkSimpleRequest request = null;
+		try {
+			request = createRequest(url, method.toUpperCase(), body);
+			getExecutorService().submit(new Call(callback, request));
+		} catch (IOException e) {
+			if(callback != null) {
+				callback.onFailure(request, e);
+			}else {
+				throw new IllegalArgumentException(e);
+			}
+		}
+	}
+	
+	private ExecutorService getExecutorService() {
+		if(executorService == null) {
+			synchronized (JdkSimpleHttp.class) {
+				if(executorService == null) {
+					executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
+				}
+			}
+		}
+		return executorService;
 	}
 }

@@ -32,6 +32,8 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.client.methods.HttpUriRequest;
 
+import com.miexist.simple.httpapi.FileItem;
+import com.miexist.simple.httpapi.HttpBody;
 import com.miexist.simple.httpapi.SimpleCallback;
 import com.miexist.simple.httpapi.SimpleHttp;
 import com.miexist.simple.httpapi.SimpleResponse;
@@ -199,7 +201,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	@Override
 	public SimpleResponse execute(Map<String, String> heads, String url,
 			String method, Map<String, String> params) throws IOException {
-		HttpUriRequest request = createRequest(url, method, params);
+		HttpUriRequest request = createRequest(url, method, params, null);
 		HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
 		HttpClientUtils.addHeaders(request, heads);
 		HttpResponse response = httpClient.execute(request);
@@ -215,10 +217,19 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	@Override
 	public void enqueue(Map<String, String> heads, String url, String method,
 			Map<String, String> params, SimpleCallback callback) {
-		HttpUriRequest request = createRequest(url, method, params);
-		HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
-		HttpClientUtils.addHeaders(request, heads);
-		executorService.submit(new Call(request, callback));
+		HttpUriRequest request = null;
+		try {
+			request = createRequest(url, method, params, null);
+			HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
+			HttpClientUtils.addHeaders(request, heads);
+			executorService.submit(new Call(request, callback));
+		}catch(IOException e) {
+			if(callback != null) {
+				callback.onFailure(request == null ? null : new HttpClientSimpleRequest(request), e);
+			}else {
+				throw new IllegalArgumentException(e);
+			}
+		}
 	}
 
 	/**
@@ -230,7 +241,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * @throws IOException 
 	 */
 	private HttpUriRequest createRequest(String url, String method,
-			Map<String, String> params) {
+			Map<String, String> params, FileItem[] fileItems) throws IOException {
 		if ("GET".equalsIgnoreCase(method)) {
 			return new HttpGet(StringUtils.appendUrlParams(url, params));
 		}
@@ -252,7 +263,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 		}else{
 			request = new HttpPost(url);
 		}
-		HttpClientUtils.setParams(request, params);
+		HttpClientUtils.setParams(request, params, fileItems);
 		return request;
 	}
 
@@ -276,5 +287,43 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 				callback.onFailure(new HttpClientSimpleRequest(request), e);
 			}
 		}
+	}
+
+	@Override
+	public SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params,
+			FileItem... fileItems) throws IOException {
+		HttpUriRequest request = createRequest(url, method, params, fileItems);
+		HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
+		HttpClientUtils.addHeaders(request, heads);
+		HttpResponse response = httpClient.execute(request);
+		return new HttpClientSimpleResponse(request, response);
+	}
+
+	@Override
+	public SimpleResponse execute(String url, String method, HttpBody body) throws IOException {
+		return execute(body.getHeaders(), url, method, body.getParams(), body.getFileItems());
+	}
+
+	@Override
+	public void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params,
+			SimpleCallback callback, FileItem... fileItems) {
+		HttpUriRequest request = null;
+		try {
+			request = createRequest(url, method, params, fileItems);
+			HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
+			HttpClientUtils.addHeaders(request, heads);
+			executorService.submit(new Call(request, callback));
+		}catch(IOException e) {
+			if(callback != null) {
+				callback.onFailure(request == null ? null : new HttpClientSimpleRequest(request), e);
+			}else {
+				throw new IllegalArgumentException(e);
+			}
+		}
+	}
+
+	@Override
+	public void enqueue(String url, String method, HttpBody body, SimpleCallback callback) {
+		enqueue(body.getHeaders(), url, method, body.getParams(), callback, body.getFileItems());
 	}
 }

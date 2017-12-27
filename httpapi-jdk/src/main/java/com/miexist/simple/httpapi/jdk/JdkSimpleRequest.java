@@ -18,11 +18,12 @@ package com.miexist.simple.httpapi.jdk;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.miexist.simple.httpapi.HttpBody;
 import com.miexist.simple.httpapi.SimpleRequest;
 import com.miexist.simple.httpapi.util.StringUtils;
 
@@ -34,9 +35,8 @@ public class JdkSimpleRequest implements SimpleRequest {
 
 	private String method;
 	private URL url;
-	private Map<String, List<String>> headers = new HashMap<String, List<String>>();
 	
-	private JdkRequestBody body;
+	private HttpBody body;
 	
 	/* (non-Javadoc)
 	 * @see com.miexist.simple.httpapi.SimpleRequest#getRequest()
@@ -83,7 +83,11 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 */
 	@Override
 	public List<String> getHeaders(String name) {
-		return headers.get(name);
+		String value = body.getHeaders().get(name);
+		if(value == null) {
+			return null;
+		}
+		return Arrays.asList(value.split(";"));
 	}
 
 	/* (non-Javadoc)
@@ -91,7 +95,15 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 */
 	@Override
 	public Map<String, List<String>> getHeaders() {
-		return headers;
+		Map<String, String> heads = body.getHeaders();
+		Map<String, List<String>> map = new HashMap<String, List<String>>(heads.size());
+		for(Map.Entry<String, String> entry : heads.entrySet()) {
+			String value = entry.getValue();
+			if(value != null) {
+				map.put(entry.getKey(), Arrays.asList(value.split(";")));
+			}
+		}
+		return map;
 	}
 
 	/**
@@ -100,7 +112,14 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 */
 	public void setHeaders(Map<String, List<String>> headers){
 		if(headers != null){
-			this.headers.putAll(headers);
+			for(Map.Entry<String, List<String>> entry : headers.entrySet()) {
+				List<String> list = entry.getValue();
+				if(list != null) {
+					body.setHeader(entry.getKey(), StringUtils.join(list, ";"));
+				}else {
+					body.setHeader(entry.getKey(), null);
+				}
+			}
 		}
 	}
 	
@@ -110,12 +129,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * @param value
 	 */
 	public void addHeader(String name, String value){
-		List<String> list = headers.get(name);
-		if(list == null){
-			list = new ArrayList<String>(1);
-			headers.put(name, list);
-		}
-		list.add(value);
+		body.addHeader(name, value);
 	}
 
 	/**
@@ -124,14 +138,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * @param value
 	 */
 	public void setHeader(String name, String value){
-		List<String> list = headers.get(name);
-		if(list == null){
-			list = new ArrayList<String>(1);
-			headers.put(name, list);
-		}else{
-			list.clear();
-		}
-		list.add(value);
+		body.setHeader(name, value);
 	}
 	
 	/**
@@ -145,7 +152,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * 获取http请求内容参数
 	 * @return JdkRequestBody
 	 */
-	public JdkRequestBody getBody() {
+	public HttpBody getBody() {
 		return body;
 	}
 
@@ -153,7 +160,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * 设置http请求内容参数
 	 * @param body
 	 */
-	public void setBody(JdkRequestBody body) {
+	public void setBody(HttpBody body) {
 		this.body = body;
 	}
 

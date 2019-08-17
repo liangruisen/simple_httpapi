@@ -61,6 +61,16 @@ public class OkHttpSimpleHttp implements SimpleHttp {
 
 	/*
 	 * (non-Javadoc)
+	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String, java.util.Map, com.miexist.simple.httpapi.SimpleCallback)
+	 */
+	@Override
+	public void get(Map<String, String> heads, String url, Map<String, String> params,
+			SimpleCallback callback) {
+		enqueue(heads, url, "GET", params, callback);
+	}
+
+	/*
+	 * (non-Javadoc)
 	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.lang.String)
 	 */
 	@Override
@@ -76,6 +86,16 @@ public class OkHttpSimpleHttp implements SimpleHttp {
 	public SimpleResponse get(Map<String, String> heads, String url)
 			throws IOException {
 		return execute(heads, url, "GET", null);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String)
+	 */
+	@Override
+	public SimpleResponse get(Map<String, String> heads, String url, Map<String, String> params)
+			throws IOException {
+		return execute(heads, url, "GET", params);
 	}
 
 	/*

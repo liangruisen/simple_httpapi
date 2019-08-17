@@ -50,6 +50,16 @@ public interface SimpleHttp {
 	 * @param callback
 	 */
 	void get(Map<String, String> heads, String url, SimpleCallback callback);
+
+	/**
+	 * 设置HTTP Header信息并
+	 * 异步发送HTTP GET 请求，当请求返回后掉用SimpleCallback 的 onResponse 方法；
+	 * 当请求发生IO异常时调用SimpleCallback 的onFailure方法
+	 * @param heads
+	 * @param url
+	 * @param callback
+	 */
+	void get(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback);
 	
 	/**
 	 * 同步发送HTTP GET 请求
@@ -67,6 +77,16 @@ public interface SimpleHttp {
 	 * @throws IOException
 	 */
 	SimpleResponse get(Map<String, String> heads, String url) throws IOException;
+
+	/**
+	 * 设置HTTP Header信息并同步发送HTTP GET 请求
+	 * @param heads
+	 * @param url
+	 * @param params
+	 * @return SimpleResponse
+	 * @throws IOException
+	 */
+	SimpleResponse get(Map<String, String> heads, String url, Map<String, String> params) throws IOException;
 	
 	/**
 	 * 异步发送HTTP POST 请求，当请求返回后掉用SimpleCallback 的 onResponse 方法；

@@ -51,7 +51,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 
 	private HttpClient httpClient = HttpClientFactory.createHttpClient();
 
-	private ExecutorService executorService = Executors.newFixedThreadPool(3);
+	private ExecutorService executorService = null;
 
 	/*
 	 * (non-Javadoc)
@@ -71,8 +71,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void get(Map<String, String> heads, String url,
-			SimpleCallback callback) {
+	public void get(Map<String, String> heads, String url, SimpleCallback callback) {
 		enqueue(heads, url, "GET", null, callback);
 	}
 
@@ -93,8 +92,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.lang.String)
 	 */
 	@Override
-	public SimpleResponse get(Map<String, String> heads, String url)
-			throws IOException {
+	public SimpleResponse get(Map<String, String> heads, String url) throws IOException {
 		return execute(heads, url, "GET", null);
 	}
 
@@ -116,8 +114,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(Map<String, String> heads, String url,
-			SimpleCallback callback) {
+	public void post(Map<String, String> heads, String url, SimpleCallback callback) {
 		enqueue(heads, url, "POST", null, callback);
 	}
 
@@ -138,8 +135,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.lang.String)
 	 */
 	@Override
-	public SimpleResponse post(Map<String, String> heads, String url)
-			throws IOException {
+	public SimpleResponse post(Map<String, String> heads, String url) throws IOException {
 		return execute(heads, url, "POST", null);
 	}
 
@@ -150,8 +146,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.util.Map, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(String url, Map<String, String> params,
-			SimpleCallback callback) {
+	public void post(String url, Map<String, String> params, SimpleCallback callback) {
 		enqueue(null, url, "POST", params, callback);
 	}
 
@@ -163,8 +158,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(Map<String, String> heads, String url,
-			Map<String, String> params, SimpleCallback callback) {
+	public void post(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback) {
 		enqueue(heads, url, "POST", params, callback);
 	}
 
@@ -175,8 +169,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.util.Map)
 	 */
 	@Override
-	public SimpleResponse post(String url, Map<String, String> params)
-			throws IOException {
+	public SimpleResponse post(String url, Map<String, String> params) throws IOException {
 		return execute(null, url, "POST", params);
 	}
 
@@ -187,106 +180,8 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	 * java.lang.String, java.util.Map)
 	 */
 	@Override
-	public SimpleResponse post(Map<String, String> heads, String url,
-			Map<String, String> params) throws IOException {
+	public SimpleResponse post(Map<String, String> heads, String url, Map<String, String> params) throws IOException {
 		return execute(heads, url, "POST", params);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.miexist.simple.httpapi.SimpleHttp#execute(java.util.Map,
-	 * java.lang.String, java.lang.String, java.util.Map)
-	 */
-	@Override
-	public SimpleResponse execute(Map<String, String> heads, String url,
-			String method, Map<String, String> params) throws IOException {
-		HttpUriRequest request = createRequest(url, method, params, null);
-		HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
-		HttpClientUtils.addHeaders(request, heads);
-		HttpResponse response = httpClient.execute(request);
-		return new HttpClientSimpleResponse(request, response);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.miexist.simple.httpapi.SimpleHttp#enqueue(java.util.Map,
-	 * java.lang.String, java.lang.String, java.util.Map)
-	 */
-	@Override
-	public void enqueue(Map<String, String> heads, String url, String method,
-			Map<String, String> params, SimpleCallback callback) {
-		HttpUriRequest request = null;
-		try {
-			request = createRequest(url, method, params, null);
-			HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
-			HttpClientUtils.addHeaders(request, heads);
-			executorService.submit(new Call(request, callback));
-		}catch(IOException e) {
-			if(callback != null) {
-				callback.onFailure(request == null ? null : new HttpClientSimpleRequest(request), e);
-			}else {
-				throw new IllegalArgumentException(e);
-			}
-		}
-	}
-
-	/**
-	 * 根据HTTP方法名称method参数创建HttpUriRequest并设置请求参数
-	 * @param url
-	 * @param method
-	 * @param params
-	 * @return HttpUriRequest
-	 * @throws IOException 
-	 */
-	private HttpUriRequest createRequest(String url, String method,
-			Map<String, String> params, FileItem[] fileItems) throws IOException {
-		if ("GET".equalsIgnoreCase(method)) {
-			return new HttpGet(StringUtils.appendUrlParams(url, params));
-		}
-		if ("HEAD".equalsIgnoreCase(method)) {
-			return new HttpHead(StringUtils.appendUrlParams(url, params));
-		}
-		if ("OPTIONS".equalsIgnoreCase(method)) {
-			return new HttpOptions(StringUtils.appendUrlParams(url, params));
-		}
-		if ("DELETE".equalsIgnoreCase(method)) {
-			return new HttpDelete(StringUtils.appendUrlParams(url, params));
-		}
-		if ("TRACE".equalsIgnoreCase(method)) {
-			return new HttpTrace(StringUtils.appendUrlParams(url, params));
-		}
-		HttpEntityEnclosingRequestBase request;
-		if ("PUT".equalsIgnoreCase(method)) {
-			request = new HttpPut(url);
-		}else{
-			request = new HttpPost(url);
-		}
-		HttpClientUtils.setParams(request, params, fileItems);
-		return request;
-	}
-
-	private class Call implements Runnable {
-		public Call(HttpUriRequest request, SimpleCallback callback) {
-			super();
-			this.request = request;
-			this.callback = callback;
-		}
-
-		private HttpUriRequest request;
-		private SimpleCallback callback;
-
-		@Override
-		public void run() {
-			try {
-				HttpResponse response = httpClient.execute(request);
-				callback.onResponse(new HttpClientSimpleResponse(request,
-						response));
-			} catch (IOException e) {
-				callback.onFailure(new HttpClientSimpleRequest(request), e);
-			}
-		}
 	}
 
 	@Override
@@ -312,7 +207,7 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 			request = createRequest(url, method, params, fileItems);
 			HttpClientUtils.modifyRequestToAcceptGzipResponse(request);
 			HttpClientUtils.addHeaders(request, heads);
-			executorService.submit(new Call(request, callback));
+			getExecutorService().submit(new Call(request, callback));
 		}catch(IOException e) {
 			if(callback != null) {
 				callback.onFailure(request == null ? null : new HttpClientSimpleRequest(request), e);
@@ -325,5 +220,82 @@ public class HttpClientSimpleHttp implements SimpleHttp {
 	@Override
 	public void enqueue(String url, String method, HttpBody body, SimpleCallback callback) {
 		enqueue(body.getHeaders(), url, method, body.getParams(), callback, body.getFileItems());
+	}
+
+	@Override
+	public void get(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback) {
+		enqueue(heads, url, "GET", params, callback);
+	}
+
+	@Override
+	public SimpleResponse get(Map<String, String> heads, String url, Map<String, String> params) throws IOException {
+		return execute(heads, url, "GET", params);
+	}
+	
+	/**
+	 * 根据HTTP方法名称method参数创建HttpUriRequest并设置请求参数
+	 * @param url
+	 * @param method
+	 * @param params
+	 * @return HttpUriRequest
+	 * @throws IOException 
+	 */
+	private HttpUriRequest createRequest(String url, String method,
+			Map<String, String> params, FileItem... fileItems) throws IOException {
+		if ("GET".equalsIgnoreCase(method)) {
+			return new HttpGet(StringUtils.appendUrlParams(url, params));
+		}
+		if ("HEAD".equalsIgnoreCase(method)) {
+			return new HttpHead(StringUtils.appendUrlParams(url, params));
+		}
+		if ("OPTIONS".equalsIgnoreCase(method)) {
+			return new HttpOptions(StringUtils.appendUrlParams(url, params));
+		}
+		if ("DELETE".equalsIgnoreCase(method)) {
+			return new HttpDelete(StringUtils.appendUrlParams(url, params));
+		}
+		if ("TRACE".equalsIgnoreCase(method)) {
+			return new HttpTrace(StringUtils.appendUrlParams(url, params));
+		}
+		HttpEntityEnclosingRequestBase request;
+		if ("PUT".equalsIgnoreCase(method)) {
+			request = new HttpPut(url);
+		}else{
+			request = new HttpPost(url);
+		}
+		HttpClientUtils.setParams(request, params, fileItems);
+		return request;
+	}
+
+	private ExecutorService getExecutorService() {
+		if(executorService == null) {
+			synchronized (HttpClientSimpleHttp.class) {
+				if(executorService == null) {
+					executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
+				}
+			}
+		}
+		return executorService;
+	}
+	
+	private class Call implements Runnable {
+		public Call(HttpUriRequest request, SimpleCallback callback) {
+			super();
+			this.request = request;
+			this.callback = callback;
+		}
+
+		private HttpUriRequest request;
+		private SimpleCallback callback;
+
+		@Override
+		public void run() {
+			try {
+				HttpResponse response = httpClient.execute(request);
+				callback.onResponse(new HttpClientSimpleResponse(request, response));
+			} catch (IOException e) {
+				callback.onFailure(new HttpClientSimpleRequest(request), e);
+			}
+		}
 	}
 }

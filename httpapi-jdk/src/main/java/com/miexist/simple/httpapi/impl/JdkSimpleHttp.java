@@ -54,9 +54,16 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void get(Map<String, String> heads, String url,
-			SimpleCallback callback) {
+	public void get(Map<String, String> heads, String url, SimpleCallback callback) {
 		enqueue(heads, url, "GET", null, callback);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
+	 */
+	@Override
+	public void get(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback) {
+		enqueue(heads, url, "GET", params, callback);
 	}
 
 	/* (non-Javadoc)
@@ -71,9 +78,16 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String)
 	 */
 	@Override
-	public SimpleResponse get(Map<String, String> heads, String url)
-			throws IOException {
+	public SimpleResponse get(Map<String, String> heads, String url) throws IOException {
 		return execute(heads, url, "GET", null);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.miexist.simple.httpapi.SimpleHttp#get(java.util.Map, java.lang.String)
+	 */
+	@Override
+	public SimpleResponse get(Map<String, String> heads, String url, Map<String, String> params) throws IOException {
+		return execute(heads, url, "GET", params);
 	}
 
 	/* (non-Javadoc)
@@ -88,8 +102,7 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#post(java.util.Map, java.lang.String, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(Map<String, String> heads, String url,
-			SimpleCallback callback) {
+	public void post(Map<String, String> heads, String url, SimpleCallback callback) {
 		enqueue(heads, url, "POST", null, callback);
 	}
 
@@ -105,8 +118,7 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#post(java.util.Map, java.lang.String)
 	 */
 	@Override
-	public SimpleResponse post(Map<String, String> heads, String url)
-			throws IOException {
+	public SimpleResponse post(Map<String, String> heads, String url) throws IOException {
 		return execute(heads, url, "POST", null);
 	}
 
@@ -114,8 +126,7 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#post(java.lang.String, java.util.Map, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(String url, Map<String, String> params,
-			SimpleCallback callback) {
+	public void post(String url, Map<String, String> params, SimpleCallback callback) {
 		enqueue(null, url, "POST", params, callback);
 	}
 
@@ -123,8 +134,7 @@ public class JdkSimpleHttp implements SimpleHttp {
 	 * @see com.miexist.simple.httpapi.SimpleHttp#post(java.util.Map, java.lang.String, java.util.Map, com.miexist.simple.httpapi.SimpleCallback)
 	 */
 	@Override
-	public void post(Map<String, String> heads, String url,
-			Map<String, String> params, SimpleCallback callback) {
+	public void post(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback) {
 		enqueue(heads, url, "POST", params, callback);
 	}
 
@@ -146,25 +156,57 @@ public class JdkSimpleHttp implements SimpleHttp {
 		return execute(heads, url, "POST", params);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.miexist.simple.httpapi.SimpleHttp#execute(java.util.Map, java.lang.String, java.lang.String, java.util.Map)
-	 */
 	@Override
-	public SimpleResponse execute(Map<String, String> heads, String url,
-			String method, Map<String, String> params) throws IOException {
-		HttpBody body = new JdkHttpBody(heads, params);
-		JdkSimpleRequest request = createRequest(url, method.toUpperCase(), body);
-		return execute(request);
+	public SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params,
+			FileItem... fileItems) throws IOException {
+		List<FileItem> fileList = null;
+		if(fileItems != null) {
+			fileList = Arrays.asList(fileItems);
+		}
+		HttpBody body = new JdkHttpBody(heads, params, fileList);
+		return execute(url, method, body);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.miexist.simple.httpapi.SimpleHttp#enqueue(java.util.Map, java.lang.String, java.lang.String, java.util.Map, com.miexist.simple.httpapi.SimpleCallback)
-	 */
 	@Override
-	public void enqueue(Map<String, String> heads, String url, String method,
-			Map<String, String> params, SimpleCallback callback) {
-		HttpBody body = new JdkHttpBody(heads, params);
+	public void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params,
+			SimpleCallback callback, FileItem... fileItems) {
+		List<FileItem> fileList = null;
+		if(fileItems != null) {
+			fileList = Arrays.asList(fileItems);
+		}
+		HttpBody body = new JdkHttpBody(heads, params, fileList);
 		enqueue(url, method, body, callback);
+	}
+
+	@Override
+	public SimpleResponse execute(String url, String method, HttpBody body) throws IOException {
+		return execute(createRequest(url, method, body));
+	}
+
+	@Override
+	public void enqueue(String url, String method, HttpBody body, SimpleCallback callback) {
+		JdkSimpleRequest request = null;
+		try {
+			request = createRequest(url, method.toUpperCase(), body);
+			getExecutorService().submit(new Call(callback, request));
+		} catch (IOException e) {
+			if(callback != null) {
+				callback.onFailure(request, e);
+			}else {
+				throw new IllegalArgumentException(e);
+			}
+		}
+	}
+	
+	private ExecutorService getExecutorService() {
+		if(executorService == null) {
+			synchronized (JdkSimpleHttp.class) {
+				if(executorService == null) {
+					executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
+				}
+			}
+		}
+		return executorService;
 	}
 	
 	private JdkSimpleResponse execute(JdkSimpleRequest request) throws IOException {
@@ -248,59 +290,5 @@ public class JdkSimpleHttp implements SimpleHttp {
 				callback.onFailure(request, e);
 			}
 		}
-	}
-
-	@Override
-	public SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params,
-			FileItem... fileItems) throws IOException {
-		List<FileItem> fileList = null;
-		if(fileItems != null) {
-			fileList = Arrays.asList(fileItems);
-		}
-		HttpBody body = new JdkHttpBody(heads, params, fileList);
-		return execute(url, method, body);
-	}
-
-	@Override
-	public void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params,
-			SimpleCallback callback, FileItem... fileItems) {
-		List<FileItem> fileList = null;
-		if(fileItems != null) {
-			fileList = Arrays.asList(fileItems);
-		}
-		HttpBody body = new JdkHttpBody(heads, params, fileList);
-		enqueue(url, method, body, callback);
-	}
-
-	@Override
-	public SimpleResponse execute(String url, String method, HttpBody body) throws IOException {
-		JdkSimpleRequest request = createRequest(url, method, body);
-		return execute(request);
-	}
-
-	@Override
-	public void enqueue(String url, String method, HttpBody body, SimpleCallback callback) {
-		JdkSimpleRequest request = null;
-		try {
-			request = createRequest(url, method.toUpperCase(), body);
-			getExecutorService().submit(new Call(callback, request));
-		} catch (IOException e) {
-			if(callback != null) {
-				callback.onFailure(request, e);
-			}else {
-				throw new IllegalArgumentException(e);
-			}
-		}
-	}
-	
-	private ExecutorService getExecutorService() {
-		if(executorService == null) {
-			synchronized (JdkSimpleHttp.class) {
-				if(executorService == null) {
-					executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 1);
-				}
-			}
-		}
-		return executorService;
 	}
 }

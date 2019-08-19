@@ -180,35 +180,6 @@ public class OkHttpSimpleHttp implements SimpleHttp {
 		return execute(heads, url, "POST", params);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.miexist.simple.httpapi.SimpleHttp#execute(java.util.Map,
-	 * java.lang.String, java.lang.String, java.util.Map)
-	 */
-	@Override
-	public SimpleResponse execute(Map<String, String> heads, String url, String method, Map<String, String> params)
-			throws IOException {
-		Request request = buildRequest(heads, url, method, params, null);
-		Call call = okHttpClient.newCall(request);
-		return new OkHttpSimpleResponse(request, call.execute());
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.miexist.simple.httpapi.SimpleHttp#enqueue(java.util.Map,
-	 * java.lang.String, java.lang.String, java.util.Map,
-	 * com.miexist.simple.httpapi.SimpleCallback)
-	 */
-	@Override
-	public void enqueue(Map<String, String> heads, String url, String method, Map<String, String> params,
-			SimpleCallback callback) {
-		Request request = buildRequest(heads, url, method, params, null);
-		Call call = okHttpClient.newCall(request);
-		call.enqueue(new OkHttpCallback(callback));
-	}
-
 	/**
 	 * 将请求信息拼装成okhttp的请求Request对象
 	 * 
@@ -278,9 +249,7 @@ public class OkHttpSimpleHttp implements SimpleHttp {
 
 	@Override
 	public SimpleResponse execute(String url, String method, HttpBody body) throws IOException {
-		Request request = buildRequest(body.getHeaders(), url, method, body.getParams(), body.getFileItems());
-		Call call = okHttpClient.newCall(request);
-		return new OkHttpSimpleResponse(request, call.execute());
+		return execute(body.getHeaders(), url, method, body.getParams(), body.getFileItems());
 	}
 
 	@Override
@@ -296,6 +265,16 @@ public class OkHttpSimpleHttp implements SimpleHttp {
 		enqueue(body.getHeaders(), url, method, body.getParams(), callback, body.getFileItems());
 	}
 
+	@Override
+	public void get(Map<String, String> heads, String url, Map<String, String> params, SimpleCallback callback) {
+		enqueue(heads, url, "GET", params, callback);
+	}
+
+	@Override
+	public SimpleResponse get(Map<String, String> heads, String url, Map<String, String> params) throws IOException {
+		return execute(heads, url, "GET", params);
+	}
+	
 	class FileItemRequestBody extends RequestBody {
 
 		private final MediaType medialType;

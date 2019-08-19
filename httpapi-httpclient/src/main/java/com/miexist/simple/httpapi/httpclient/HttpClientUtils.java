@@ -101,7 +101,7 @@ public abstract class HttpClientUtils {
 	 * @param params
 	 * @throws IOException 
 	 */
-	public static void setParams(HttpEntityEnclosingRequest request, Map<String, String> params, FileItem[] fileItems) throws IOException{
+	public static void setParams(HttpEntityEnclosingRequest request, Map<String, String> params, FileItem... fileItems) throws IOException{
 		if(fileItems == null || fileItems.length <= 0) {
 			if(params != null && !params.isEmpty()){
 				EntityBuilder builder = EntityBuilder.create();

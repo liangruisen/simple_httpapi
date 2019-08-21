@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.miexist.simple.httpapi.HttpBody;
 import com.miexist.simple.httpapi.SimpleRequest;
+import com.miexist.simple.httpapi.impl.JdkHttpBody;
 import com.miexist.simple.httpapi.util.StringUtils;
 
 /**
@@ -83,7 +84,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 */
 	@Override
 	public List<String> getHeaders(String name) {
-		String value = body.getHeaders().get(name);
+		String value = getBody().getHeaders().get(name);
 		if(value == null) {
 			return null;
 		}
@@ -95,7 +96,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 */
 	@Override
 	public Map<String, List<String>> getHeaders() {
-		Map<String, String> heads = body.getHeaders();
+		Map<String, String> heads = getBody().getHeaders();
 		Map<String, List<String>> map = new HashMap<String, List<String>>(heads.size());
 		for(Map.Entry<String, String> entry : heads.entrySet()) {
 			String value = entry.getValue();
@@ -115,9 +116,9 @@ public class JdkSimpleRequest implements SimpleRequest {
 			for(Map.Entry<String, List<String>> entry : headers.entrySet()) {
 				List<String> list = entry.getValue();
 				if(list != null) {
-					body.setHeader(entry.getKey(), StringUtils.join(list, ";"));
+					getBody().setHeader(entry.getKey(), StringUtils.join(list, ";"));
 				}else {
-					body.setHeader(entry.getKey(), null);
+					getBody().setHeader(entry.getKey(), null);
 				}
 			}
 		}
@@ -129,7 +130,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * @param value
 	 */
 	public void addHeader(String name, String value){
-		body.addHeader(name, value);
+		getBody().addHeader(name, value);
 	}
 
 	/**
@@ -138,7 +139,7 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * @param value
 	 */
 	public void setHeader(String name, String value){
-		body.setHeader(name, value);
+		getBody().setHeader(name, value);
 	}
 	
 	/**
@@ -153,6 +154,9 @@ public class JdkSimpleRequest implements SimpleRequest {
 	 * @return JdkRequestBody
 	 */
 	public HttpBody getBody() {
+		if(body == null) {
+			body = new JdkHttpBody();
+		}
 		return body;
 	}
 

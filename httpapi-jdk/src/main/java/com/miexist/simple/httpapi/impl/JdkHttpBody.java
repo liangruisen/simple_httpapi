@@ -55,7 +55,7 @@ public class JdkHttpBody implements HttpBody {
 	private Map<String, String> params = new HashMap<String, String>(10);
 	private List<FileItem> fileItems = new ArrayList<FileItem>(1);
 	private String contentType = HttpBody.FORM_URLENCODED;
-	private boolean modifyed = false;
+	private boolean modifyed = true;
 	private long contentLength = 0;
 	private ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
